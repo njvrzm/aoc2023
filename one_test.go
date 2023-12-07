@@ -8,12 +8,6 @@ import (
 	"time"
 )
 
-func Must[T any](value T, err error) T {
-	if err != nil {
-		panic(err)
-	}
-	return value
-}
 func TestDayOnePartOne_Full(t *testing.T) {
 	t.Run("Day one, part one", func(t *testing.T) {
 		expected := 56049
@@ -26,7 +20,7 @@ func TestDayOnePartOne_Full(t *testing.T) {
 
 func bench[T any](f func() T) T {
 	before := time.Now()
-	defer fmt.Printf("Duration: %s\n", time.Since(before))
+	defer func() { fmt.Printf("Duration: %s\n", time.Since(before)) }()
 	return f()
 }
 func TestDayOnePartTwo_Full(t *testing.T) {
@@ -40,10 +34,22 @@ func TestDayOnePartTwo_Full(t *testing.T) {
 		}
 	})
 }
+
+func TestDayOnePartTwo_FullLeftRight(t *testing.T) {
+	t.Run("Day one, part two (full)", func(t *testing.T) {
+		expected := 54530
+		got := DayOnePartTwo_LeftRight(Must(os.Open("inputs/1")))
+		if expected != got {
+			t.Errorf("two.two-leftright: %d != %d", expected, got)
+		}
+	})
+}
 func TestDayOnePartTwo_Stem_Full(t *testing.T) {
 	t.Run("Day one, part two (full, stem method)", func(t *testing.T) {
 		expected := 54530
-		got := DayOnePartTwoStem(Must(os.Open("inputs/1")))
+		got := bench(func() int {
+			return DayOnePartTwoStem(Must(os.Open("inputs/1")))
+		})
 		if expected != got {
 			t.Errorf("one.one: %d != %d", expected, got)
 		}
@@ -62,6 +68,20 @@ func BenchmarkDayOnePartTwo(b *testing.B) {
 	b.Run("Day one, part two", func(b *testing.B) {
 		for i := 1; i <= b.N; i++ {
 			DayOnePartTwo(Must(os.Open(fmt.Sprintf("testdata/dayone/%d", i))))
+		}
+	})
+}
+func BenchmarkDayOnePartTwo_LeftRight(b *testing.B) {
+	b.Run("Day one, part two", func(b *testing.B) {
+		for i := 1; i <= b.N; i++ {
+			DayOnePartTwo_LeftRight(Must(os.Open(fmt.Sprintf("testdata/dayone/%d", i))))
+		}
+	})
+}
+func BenchmarkDayOnePartTwo_Inverse(b *testing.B) {
+	b.Run("Day one, part two", func(b *testing.B) {
+		for i := 1; i <= b.N; i++ {
+			DayOnePartTwoInverse(Must(os.Open(fmt.Sprintf("testdata/dayone/%d", i))))
 		}
 	})
 }
