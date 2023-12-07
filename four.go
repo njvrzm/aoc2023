@@ -55,13 +55,12 @@ func (l *Lotto) PartTwo() Result {
 
 var numberList = regexp.MustCompile(`[0-9 ]+`)
 
-func (l *Lotto) Load(scanner *bufio.Scanner) Solver {
+func (l *Lotto) Load(scanner *bufio.Scanner) {
 	for row := 1; scanner.Scan(); row++ {
 		numberSets := numberList.FindAllString(scanner.Text(), 3)
 		game := &Card{number: row}
 		l.cards = append(l.cards, game.Load(numberSets[1], numberSets[2]))
 	}
-	return l
 }
 
 type Card struct {

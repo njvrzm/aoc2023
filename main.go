@@ -8,7 +8,7 @@ import (
 type Solver interface {
 	PartOne() Result
 	PartTwo() Result
-	Load(scanner *bufio.Scanner) Solver
+	Load(scanner *bufio.Scanner)
 }
 
 var WrongResultType = errors.New("wrong value type requested from result")

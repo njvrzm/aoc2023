@@ -66,14 +66,13 @@ func (s *Schematic) ReadLine(row int, line string) {
 		s.AddPart(start, row, line[start:end])
 	}
 }
-func (s *Schematic) Load(scanner *bufio.Scanner) Solver {
+func (s *Schematic) Load(scanner *bufio.Scanner) {
 	s.diagram = make(map[Place]*Part)
 	s.parts = make([]*Part, 0)
 	for row := 0; scanner.Scan(); row++ {
 		s.ReadLine(row, scanner.Text())
 	}
 	s.TouchEverything()
-	return s
 }
 func (s *Schematic) PartOne() Result {
 	sum := 0

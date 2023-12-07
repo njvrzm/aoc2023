@@ -7,16 +7,16 @@ func TestDayFive(t *testing.T) {
 		{
 			day:           5,
 			version:       "example",
-			solver:        &Garden{},
+			solver:        &Almanac{},
 			expectPartOne: NumberResult{35},
-			expectPartTwo: NotImplemented,
+			expectPartTwo: NumberResult{46},
 		},
 		{
 			day:           5,
 			version:       "full",
-			solver:        &Garden{},
+			solver:        &Almanac{},
 			expectPartOne: NumberResult{806029445},
-			expectPartTwo: NotImplemented,
+			expectPartTwo: NumberResult{59370572},
 		},
 	}
 	for _, tt := range tests {

@@ -2,99 +2,94 @@ package aoc2023
 
 import (
 	"bufio"
-	"math"
 	"strings"
 )
 
-type Remap struct {
-	target int
-	source int
-	length int
+type Projection struct {
+	source Set
+	offset int
 }
 
-func (r Remap) Map(n int) (int, bool) {
-	if r.source <= n && n < r.source+r.length {
-		return r.target + n - r.source, true
-	}
-	return 0, false
+func (p Projection) Project(s Set) Set {
+	return s.Intersect(p.source).Shift(p.offset)
 }
 
-type Garden struct {
+type Almanac struct {
 	seeds []int
-	tree  *GardenTree
+	maps  []Map
 }
 
-func (g *Garden) PartOne() Result {
-	lowestLocation := math.MaxInt
-	for _, seed := range g.seeds {
-		location := g.RemapFully(seed)
-		if location < lowestLocation {
-			lowestLocation = location
-		}
+func (alm *Almanac) PartOne() Result {
+	seeds := NewSet()
+	for _, seed := range alm.seeds {
+		seeds = seeds.Union(NewSet(seed, seed+1))
 	}
-	return NumberResult{value: lowestLocation}
+	projected := alm.Project(seeds)
+	return NumberResult{projected.bounds()[0]}
 }
 
-func (g *Garden) PartTwo() Result {
-	return NotImplemented
+func (alm *Almanac) PartTwo() Result {
+	seeds := NewSet()
+	for i := 0; i < len(alm.seeds); i += 2 {
+		lower, length := alm.seeds[i], alm.seeds[i+1]
+		seeds = seeds.Union(NewSet(0, length).Shift(lower))
+	}
+	projected := alm.Project(seeds)
+	return NumberResult{projected.bounds()[0]}
 }
 
-func (g *Garden) Load(scanner *bufio.Scanner) Solver {
-	// read seed line
-	scanner.Scan()
-	g.seeds = AllNumbers(scanner.Text())
+func (alm *Almanac) Load(scanner *bufio.Scanner) {
+	alm.seeds = ReadSeeds(scanner)
+	ReadBlank(scanner)
 
-	tree := &GardenTree{category: "seed", remappers: make([]Remap, 0)}
-	g.tree = tree
-
+	alm.maps = make([]Map, 0)
 	for scanner.Scan() {
-		tree.ReadLine(scanner.Text())
-		if tree.nextStep != nil {
-			tree = tree.nextStep
+		alm.maps = append(alm.maps, ReadMap(scanner))
+	}
+}
+
+func ReadSeeds(scanner *bufio.Scanner) []int {
+	scanner.Scan()
+	return AllNumbers(scanner.Text())
+}
+
+func (alm *Almanac) Project(s Set) Set {
+	for _, m := range alm.maps {
+		s = m.Project(s)
+	}
+	return s
+}
+
+type Map struct {
+	category    string
+	projections []Projection
+}
+
+func ReadMap(scanner *bufio.Scanner) Map {
+	category := strings.SplitN(scanner.Text(), "-", 2)[0]
+	m := Map{category: category, projections: make([]Projection, 0)}
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line == "" {
+			break
 		}
+		m.projections = append(m.projections, ReadProjection(line))
 	}
-	return g
+	return m
 }
-
-func (g *Garden) RemapFully(n int) int {
-	tree := g.tree
-	for tree != nil {
-		n = tree.Remap(n)
-		tree = tree.nextStep
-	}
-	return n
-}
-
-type GardenTree struct {
-	category  string
-	nextStep  *GardenTree
-	remappers []Remap
-}
-
-func NewGardenTree(category string) *GardenTree {
-	return &GardenTree{category: category, remappers: make([]Remap, 0)}
-}
-func (gt *GardenTree) ReadLine(line string) {
-	if line == "" {
-		return
-	}
+func ReadProjection(line string) Projection {
 	numbers := AllNumbers(line)
-	if len(numbers) > 0 {
-		gt.remappers = append(gt.remappers, Remap{numbers[0], numbers[1], numbers[2]})
-		return
-	}
-	if strings.HasSuffix(line, " map:") {
-		category := strings.SplitN(line, "-", 2)[0]
-		gt.nextStep = NewGardenTree(category)
-	}
+	low := numbers[1]
+	high := numbers[1] + numbers[2]
+	offset := numbers[0] - numbers[1]
+	return Projection{NewSet(low, high), offset}
 }
 
-func (gt *GardenTree) Remap(n int) int {
-	for _, rm := range gt.remappers {
-		out, yes := rm.Map(n)
-		if yes {
-			return out
-		}
+func (gt *Map) Project(s Set) Set {
+	projected := NewSet()
+	for _, p := range gt.projections {
+		projected = projected.Union(p.Project(s))
+		s = s.Minus(p.source)
 	}
-	return n
+	return projected.Union(s)
 }
