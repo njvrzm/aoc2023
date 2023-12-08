@@ -39,7 +39,7 @@ func Alltoi(nss []string) ([]int, error) {
 // A single integer n is represented as [[n, n+1]]; an unbroken interval of length
 // m by [[n, n+m]]; and, for example, the 20s, 50s and 90s by [[20,30],[50,60],[90,100]].
 type Set struct {
-	contains []Interval
+	intervals []Interval
 }
 
 func NewSet(bounds ...int) Set {
@@ -53,11 +53,11 @@ func NewSet(bounds ...int) Set {
 func (s Set) Intersect(o Set) Set {
 	sIndex := 0
 	oIndex := 0
-	out := make([]Interval, 0, len(s.contains)+len(o.contains))
+	out := make([]Interval, 0, len(s.intervals)+len(o.intervals))
 
-	for sIndex < len(s.contains) && oIndex < len(o.contains) {
-		sInt := s.contains[sIndex]
-		oInt := o.contains[oIndex]
+	for sIndex < len(s.intervals) && oIndex < len(o.intervals) {
+		sInt := s.intervals[sIndex]
+		oInt := o.intervals[oIndex]
 		outInt := sInt.Intersect(oInt)
 		if !outInt.IsEmpty() {
 			out = append(out, outInt)
@@ -79,10 +79,10 @@ func (s Set) Inverse() Set {
 	if len(bounds) == 0 {
 		return Everything
 	}
-	if s.contains[0].low == math.MinInt {
+	if s.intervals[0].low == math.MinInt {
 		bounds = bounds[1 : len(bounds)-1]
 	} else {
-		wrapped := make([]int, 0, 2*(len(s.contains)+1))
+		wrapped := make([]int, 0, 2*(len(s.intervals)+1))
 		wrapped = append(wrapped, math.MinInt)
 		wrapped = append(wrapped, bounds...)
 		wrapped = append(wrapped, math.MaxInt)
@@ -92,7 +92,7 @@ func (s Set) Inverse() Set {
 }
 
 func (s Set) IsEmpty() bool {
-	return len(s.contains) == 0
+	return len(s.intervals) == 0
 }
 
 func (s Set) Union(o Set) Set {
@@ -100,8 +100,8 @@ func (s Set) Union(o Set) Set {
 }
 
 func (s Set) bounds() []int {
-	bounds := make([]int, 2*len(s.contains))
-	for i, interval := range s.contains {
+	bounds := make([]int, 2*len(s.intervals))
+	for i, interval := range s.intervals {
 		bounds[2*i] = interval.low
 		bounds[2*i+1] = interval.high
 	}
@@ -112,35 +112,39 @@ func (s Set) Minus(o Set) Set {
 }
 
 func (s Set) Equals(o Set) bool {
-	if len(s.contains) != len(o.contains) {
+	if len(s.intervals) != len(o.intervals) {
 		return false
 	}
-	for i := 0; i < len(s.contains); i++ {
-		if s.contains[i] != o.contains[i] {
+	for i := 0; i < len(s.intervals); i++ {
+		if s.intervals[i] != o.intervals[i] {
 			return false
 		}
 	}
 	return true
 }
-func (s Set) Shift(offset int) Set {
-	outIntervals := make([]Interval, len(s.contains))
-	for i, interval := range s.contains {
-		outIntervals[i] = interval.Shift(offset)
+func (s Set) Translate(offset int) Set {
+	outIntervals := make([]Interval, len(s.intervals))
+	for i, interval := range s.intervals {
+		outIntervals[i] = interval.Translate(offset)
 	}
 	return Set{outIntervals}
 }
 
-// Interval represents a half-open range of integers. [n, n] is empty;
-// [n, n+1] contains only n; [n, n+m] contains m consecutive integers starting with n
+// Interval represents a half-open range of integers. If high <= low,
+// the interval is empty.
 type Interval struct {
 	low  int
 	high int
 }
 
-func (i Interval) Shift(offset int) Interval {
+// Translate returns an interval with the same size but with offset added
+// to each bound.
+func (i Interval) Translate(offset int) Interval {
 	return Interval{i.low + offset, i.high + offset}
 }
 
+// Intersect returns an interval covering all integers that are in both
+// i and o. This may be empty.
 func (i Interval) Intersect(o Interval) Interval {
 	outLow := Max(i.low, o.low)
 	outHigh := Min(i.high, o.high)

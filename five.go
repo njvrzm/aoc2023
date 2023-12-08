@@ -5,18 +5,20 @@ import (
 	"strings"
 )
 
-type Projection struct {
-	source Set
-	offset int
-}
-
-func (p Projection) Project(s Set) Set {
-	return s.Intersect(p.source).Shift(p.offset)
-}
-
 type Almanac struct {
 	seeds []int
 	maps  []Map
+}
+
+func (alm *Almanac) Load(scanner *bufio.Scanner) {
+	scanner.Scan()
+	alm.seeds = AllNumbers(scanner.Text())
+	ReadBlank(scanner)
+
+	alm.maps = make([]Map, 0)
+	for scanner.Scan() {
+		alm.maps = append(alm.maps, ReadMap(scanner))
+	}
 }
 
 func (alm *Almanac) PartOne() Result {
@@ -32,25 +34,10 @@ func (alm *Almanac) PartTwo() Result {
 	seeds := NewSet()
 	for i := 0; i < len(alm.seeds); i += 2 {
 		lower, length := alm.seeds[i], alm.seeds[i+1]
-		seeds = seeds.Union(NewSet(0, length).Shift(lower))
+		seeds = seeds.Union(NewSet(0, length).Translate(lower))
 	}
 	projected := alm.Project(seeds)
 	return NumberResult{projected.bounds()[0]}
-}
-
-func (alm *Almanac) Load(scanner *bufio.Scanner) {
-	alm.seeds = ReadSeeds(scanner)
-	ReadBlank(scanner)
-
-	alm.maps = make([]Map, 0)
-	for scanner.Scan() {
-		alm.maps = append(alm.maps, ReadMap(scanner))
-	}
-}
-
-func ReadSeeds(scanner *bufio.Scanner) []int {
-	scanner.Scan()
-	return AllNumbers(scanner.Text())
 }
 
 func (alm *Almanac) Project(s Set) Set {
@@ -77,13 +64,10 @@ func ReadMap(scanner *bufio.Scanner) Map {
 	}
 	return m
 }
-func ReadProjection(line string) Projection {
-	numbers := AllNumbers(line)
-	low := numbers[1]
-	high := numbers[1] + numbers[2]
-	offset := numbers[0] - numbers[1]
-	return Projection{NewSet(low, high), offset}
-}
+
+// Project applies each of the Map's projections to the given set, accumulating the projections
+// while removing any projected range. Anything that remains unprojected is added to the accumulated
+// projections.
 
 func (gt *Map) Project(s Set) Set {
 	projected := NewSet()
@@ -92,4 +76,23 @@ func (gt *Map) Project(s Set) Set {
 		s = s.Minus(p.source)
 	}
 	return projected.Union(s)
+}
+
+// A Projection represents the application of a linear transformation (adding offset)
+// to the source Set.
+type Projection struct {
+	source Set
+	offset int
+}
+
+func ReadProjection(line string) Projection {
+	numbers := AllNumbers(line)
+	low := numbers[1]
+	high := numbers[1] + numbers[2]
+	offset := numbers[0] - numbers[1]
+	return Projection{NewSet(low, high), offset}
+}
+
+func (p Projection) Project(s Set) Set {
+	return p.source.Intersect(s).Translate(p.offset)
 }
