@@ -1,13 +1,37 @@
 package aoc2023
 
+import "math"
+
 type Place struct {
 	X int
 	Y int
 }
 
+var Nowhere = Place{math.MaxInt, math.MaxInt}
+
+func (p Place) To(o Place) Place {
+	return Place{o.X - p.X, o.Y - p.Y}
+}
+func (p Place) Plus(o Place) Place {
+	return Place{p.X + o.X, p.Y + o.Y}
+}
+func (p Place) Up() Place {
+	return p.Plus(Place{0, -1})
+}
+func (p Place) Down() Place {
+	return p.Plus(Place{0, 1})
+}
+func (p Place) Left() Place {
+	return p.Plus(Place{-1, 0})
+}
+func (p Place) Right() Place {
+	return p.Plus(Place{1, 0})
+}
+
 func (p Place) Neighbors() chan Place {
 	return p.RectangleNeighbors(1, 1)
 }
+
 func (p Place) RectangleNeighbors(width int, height int) chan Place {
 	out := make(chan Place)
 	go func() {

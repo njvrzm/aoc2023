@@ -68,3 +68,9 @@ func (e ErrorResult) Error() (error, error) {
 }
 
 var NotImplemented = ErrorResult{errors.New("not implemented")}
+
+type SkipResult struct{}
+
+func (s SkipResult) Number() (int, error)    { return 0, nil }
+func (s SkipResult) String() (string, error) { return "", nil }
+func (s SkipResult) Error() (error, error)   { return nil, nil }

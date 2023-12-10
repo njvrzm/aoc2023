@@ -16,7 +16,7 @@ func TestDaySeven(t *testing.T) {
 			version:       "full",
 			solver:        &Game{},
 			expectPartOne: NumberResult{249204891},
-			expectPartTwo: NumberResult{0},
+			expectPartTwo: NumberResult{249666369},
 		},
 	}
 	for _, tt := range tests {

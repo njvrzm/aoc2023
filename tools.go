@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"cmp"
 	"fmt"
+	"golang.org/x/exp/constraints"
 	"math"
 	"regexp"
 	"strconv"
@@ -17,7 +18,7 @@ func Must[T any](value T, err error) T {
 }
 
 func AllNumbers(line string) []int {
-	ns, _ := Alltoi(regexp.MustCompile(`[0-9]+`).FindAllString(line, -1))
+	ns, _ := Alltoi(regexp.MustCompile(`-?[0-9]+`).FindAllString(line, -1))
 	return ns
 }
 func Alltoi(nss []string) ([]int, error) {
@@ -171,9 +172,50 @@ func Min[T cmp.Ordered](one T, two T) T {
 	}
 }
 
+func GCD(a int, b int) int {
+	for b > 0 {
+		a, b = b, a%b
+	}
+	return a
+}
+func LCM(ns ...int) int {
+	out := 1
+	for _, n := range ns {
+		out = out * n / GCD(out, n)
+	}
+	return out
+}
+
 func ReadBlank(scanner *bufio.Scanner) {
 	scanner.Scan()
 	if scanner.Text() != "" {
 		panic(fmt.Sprintf("Expected empty line, but got: %q", scanner.Text()))
 	}
+}
+func All[T any](seq []T, check func(T) bool) bool {
+	for _, it := range seq {
+		if !check(it) {
+			return false
+		}
+	}
+	return true
+}
+func Any[T any](seq []T, check func(T) bool) bool {
+	for _, it := range seq {
+		if check(it) {
+			return true
+		}
+	}
+	return false
+}
+
+func Last[T any](seq []T) (result T) {
+	if len(seq) > 0 {
+		result = seq[len(seq)-1]
+	}
+	return
+}
+
+func NonZero[T constraints.Integer | constraints.Float](n T) bool {
+	return n != 0
 }

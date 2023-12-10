@@ -11,16 +11,24 @@ import (
 type SolverTest struct {
 	day           int
 	version       string
+	subversion    string
 	solver        Solver
 	expectPartOne Result
 	expectPartTwo Result
 }
 
 func (st SolverTest) Name() string {
-	return fmt.Sprintf("day=%d;version=%s", st.day, st.version)
+	name := fmt.Sprintf("day=%d;version=%s", st.day, st.version)
+	if st.subversion != "" {
+		name = fmt.Sprintf("%s.%s", name, st.subversion)
+	}
+	return name
 }
 func (st SolverTest) scanInput() *bufio.Scanner {
 	path := fmt.Sprintf("testdata/%s/%d", st.version, st.day)
+	if st.subversion != "" {
+		path = fmt.Sprintf("%s.%s", path, st.subversion)
+	}
 	return bufio.NewScanner(Must(os.Open(path)))
 }
 func (st SolverTest) Go(t *testing.T) {
@@ -30,6 +38,9 @@ func (st SolverTest) Go(t *testing.T) {
 }
 
 func (st SolverTest) testSolver(t *testing.T, expected Result, solve func() Result) {
+	if expected == nil {
+		return
+	}
 	received := solve()
 	switch expected.(type) {
 	case NumberResult:
