@@ -7,44 +7,26 @@ import (
 )
 
 type Labyrinth struct {
-	content map[Place]byte
-	path    []Place
-	been    map[Place]bool
-	width   int
-	height  int
+	grid  *Grid
+	path  []Place
+	start Place
+}
 
-	inside map[Place]bool
+var Outlets = map[byte][]Place{
+	'|': {Up, Down},
+	'-': {Left, Right},
+	'J': {Up, Left},
+	'7': {Down, Left},
+	'L': {Up, Right},
+	'F': {Down, Right},
 }
 
 func (l *Labyrinth) Outlets(p Place) []Place {
-	switch l.content[p] {
-	case '|':
-		return []Place{p.Up(), p.Down()}
-	case '-':
-		return []Place{p.Left(), p.Right()}
-	case '7':
-		return []Place{p.Left(), p.Down()}
-	case 'L':
-		return []Place{p.Up(), p.Right()}
-	case 'J':
-		return []Place{p.Left(), p.Up()}
-	case 'F':
-		return []Place{p.Right(), p.Down()}
-	case 'S':
-		return l.Inlets(p)
-	default:
-		return nil
+	outlets := make([]Place, 2)
+	for i, out := range Outlets[l.grid.content[p]] {
+		outlets[i] = p.Plus(out)
 	}
-}
-func (l *Labyrinth) Inlets(p Place) []Place {
-	inlets := make([]Place, 0)
-	for neighbor := range p.Neighbors() {
-		outlets := l.Outlets(neighbor)
-		if Any(outlets, func(o Place) bool { return o == p }) {
-			inlets = append(inlets, neighbor)
-		}
-	}
-	return inlets
+	return outlets
 }
 
 func (l *Labyrinth) PartOne() Result {
@@ -52,114 +34,79 @@ func (l *Labyrinth) PartOne() Result {
 }
 
 func (l *Labyrinth) PartTwo() Result {
+	// rewrite path
+	onPath := make(map[Place]bool)
+	for _, place := range l.path {
+		onPath[place] = true
+	}
+	for place := range l.grid.ScanRows() {
+		if !onPath[place] {
+			l.grid.content[place] = '.'
+		}
+	}
 	area := 0
-	for y := 0; y < l.height; y++ {
+	for line := range l.grid.ScanLines() {
+		line = strings.ReplaceAll(line, "-", "")
+		line = strings.ReplaceAll(line, "LJ", "")
+		line = strings.ReplaceAll(line, "F7", "")
+		line = strings.ReplaceAll(line, "L7", "|")
+		line = strings.ReplaceAll(line, "FJ", "|")
 		in := false
-		last := byte(' ')
-		for x := 0; x < l.width; x++ {
-			where := Place{x, y}
-			if !l.been[where] {
-				if in {
-					l.inside[where] = true
-					area += 1
-				}
-			} else {
-				what := l.content[where]
-				switch what {
-				case '|', '-':
-					if what == '|' {
-						in = !in
-					}
-					continue
-				case '7':
-					if last != 'F' {
-						in = !in
-					}
-				case 'J':
-					if last != 'L' {
-						in = !in
-					}
-				}
-				last = what
+		for i := 0; i < len(line); i++ {
+			if line[i] == '|' {
+				in = !in
+			} else if in {
+				area += 1
 			}
 		}
 	}
-	l.Print()
 	return NumberResult{value: area}
 }
 
+var Infill = map[[4]bool]byte{
+	[4]bool{true, false, true, false}: '|',
+	[4]bool{true, true, false, false}: 'L',
+	[4]bool{true, false, false, true}: 'J',
+	[4]bool{false, true, false, true}: '-',
+	[4]bool{false, false, true, true}: '7',
+	[4]bool{false, true, true, false}: 'F',
+}
+
+func (l *Labyrinth) FixStart() {
+	up := In(l.start, l.Outlets(l.start.Up()))
+	right := In(l.start, l.Outlets(l.start.Right()))
+	down := In(l.start, l.Outlets(l.start.Down()))
+	left := In(l.start, l.Outlets(l.start.Left()))
+	l.grid.content[l.start] = Infill[[4]bool{up, right, down, left}]
+}
+
 func (l *Labyrinth) Print() {
-	for y := 0; y < l.width; y++ {
-		line := strings.Builder{}
-		for x := 0; x < l.width; x++ {
-			where := Place{x, y}
-			if l.inside[where] {
-				line.WriteByte('.')
-			} else if l.been[where] {
-				line.WriteByte(l.content[where])
-			} else {
-				line.WriteByte(' ')
-			}
-		}
-		fmt.Println(line.String())
+	for line := range l.grid.ScanLines() {
+		fmt.Println(line)
 	}
 }
 func (l *Labyrinth) Load(scanner *bufio.Scanner) {
-	var start Place
-	l.content = make(map[Place]byte)
-	l.inside = make(map[Place]bool)
-	var row, col int
-	for row = 0; scanner.Scan(); row++ {
-		var char byte
-		for col, char = range []byte(scanner.Text()) {
-			l.content[Place{X: col, Y: row}] = char
-			if char == 'S' {
-				start = Place{X: col, Y: row}
-			}
+	l.grid = LoadGrid(scanner)
+	for place := range l.grid.ScanRows() {
+		if l.grid.content[place] == 'S' {
+			l.start = place
+			l.FixStart()
+			break
 		}
 	}
-	possible := map[byte]bool{'|': true, '-': true, 'F': true, 'J': true, '7': true, 'L': true}
-	if up := l.content[start.Up()]; up == 'J' || up == '-' || up == 'L' {
-		delete(possible, '|')
-		delete(possible, 'J')
-		delete(possible, 'L')
-	}
-	if right := l.content[start.Right()]; right == 'L' || right == '|' || right == 'F' {
-		delete(possible, 'L')
-		delete(possible, '-')
-		delete(possible, 'F')
-	}
-	if down := l.content[start.Down()]; down == '-' || down == 'F' || down == '7' {
-		delete(possible, '|')
-		delete(possible, 'F')
-		delete(possible, '7')
-	}
-	if left := l.content[start.Left()]; left == '|' || left == '7' || left == 'J' {
-		delete(possible, '-')
-		delete(possible, '7')
-		delete(possible, 'J')
-	}
-	for k := range possible {
-		l.content[start] = k
-		break
-	}
+	l.path = []Place{l.start}
+	beenTo := map[Place]bool{l.start: true}
 
-	l.width = col + 1
-	l.height = row + 1
-	l.path = []Place{start}
-	l.been = map[Place]bool{start: true}
-	for {
-		var next = Nowhere
+	done := false
+	for !done {
+		done = true
 		for _, outlet := range l.Outlets(Last(l.path)) {
-			if l.been[outlet] {
+			if beenTo[outlet] {
 				continue
 			}
-			next = outlet
+			l.path = append(l.path, outlet)
+			beenTo[outlet] = true
+			done = false
 		}
-		if next == Nowhere {
-			return
-		}
-		l.path = append(l.path, next)
-		l.been[next] = true
 	}
 }

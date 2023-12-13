@@ -11,6 +11,7 @@ func TestLabyrinth(t *testing.T) {
 			version:       "example",
 			solver:        &Labyrinth{},
 			expectPartOne: NumberResult{8},
+			expectPartTwo: NumberResult{1},
 		},
 		{
 			day:           10,
@@ -24,7 +25,7 @@ func TestLabyrinth(t *testing.T) {
 			version:       "full",
 			solver:        &Labyrinth{},
 			expectPartOne: NumberResult{7093},
-			expectPartTwo: NumberResult{1432},
+			expectPartTwo: NumberResult{407},
 		},
 	}
 	for _, tt := range tests {

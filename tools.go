@@ -8,6 +8,7 @@ import (
 	"math"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 func Must[T any](value T, err error) T {
@@ -218,4 +219,123 @@ func Last[T any](seq []T) (result T) {
 
 func NonZero[T constraints.Integer | constraints.Float](n T) bool {
 	return n != 0
+}
+func Abs[T constraints.Integer | constraints.Float](n T) T {
+	if n >= 0 {
+		return n
+	}
+	return -n
+}
+func MinMax[T constraints.Integer | constraints.Float](m, n T) (T, T) {
+	if m <= n {
+		return m, n
+	}
+	return n, m
+}
+
+type Grid struct {
+	content map[Place]byte
+	width   int
+	height  int
+}
+
+func (g *Grid) Rows() []string {
+	out := make([]string, g.height)
+	for y := 0; y < g.width; y++ {
+		line := strings.Builder{}
+		for x := 0; x < g.width; x++ {
+			line.WriteByte(g.content[Place{x, y}])
+		}
+		out[y] = line.String()
+	}
+	return out
+}
+func (g *Grid) Columns() []string {
+	out := make([]string, g.height)
+	for x := 0; x < g.width; x++ {
+		line := strings.Builder{}
+		for y := 0; y < g.width; y++ {
+			line.WriteByte(g.content[Place{x, y}])
+		}
+		out[x] = line.String()
+	}
+	return out
+}
+
+func LoadGrid(scanner *bufio.Scanner) *Grid {
+	content := make(map[Place]byte)
+	var row, col = 0, 0
+	for row = 0; scanner.Scan(); row++ {
+		line := scanner.Text()
+		for col = 0; col < len(line); col++ {
+			content[Place{X: col, Y: row}] = line[col]
+		}
+	}
+	return &Grid{content, col, row}
+}
+func (g *Grid) ScanRows() chan Place {
+	out := make(chan Place)
+	go func() {
+		defer close(out)
+		for y := 0; y < g.height; y++ {
+			for x := 0; x < g.width; x++ {
+				out <- Place{x, y}
+			}
+		}
+	}()
+	return out
+}
+func (g *Grid) ScanColumns() chan Place {
+	out := make(chan Place)
+	go func() {
+		defer close(out)
+		for x := 0; x < g.width; x++ {
+			for y := 0; y < g.height; y++ {
+				out <- Place{x, y}
+			}
+		}
+	}()
+	return out
+}
+func (g *Grid) ScanLines() chan string {
+	out := make(chan string)
+	go func() {
+		defer close(out)
+		b := strings.Builder{}
+		for place := range g.ScanRows() {
+			if place.X == 0 {
+				line := b.String()
+				if line != "" {
+					out <- line
+				}
+				b.Reset()
+			}
+			b.WriteByte(g.content[place])
+		}
+		out <- b.String()
+	}()
+	return out
+}
+func In[T comparable](thing T, list []T) bool {
+	return Any(list, func(it T) bool { return it == thing })
+}
+
+func Apply[T, U any](in []T, f func(T) U) []U {
+	out := make([]U, len(in))
+	for i, it := range in {
+		out[i] = f(it)
+	}
+	return out
+}
+
+func Equal[T comparable](one []T, two []T) bool {
+	if len(one) != len(two) {
+		return false
+	}
+	for i := 0; i < len(one); i++ {
+		if one[i] != two[i] {
+			return false
+		}
+	}
+	return true
 }

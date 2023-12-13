@@ -8,6 +8,10 @@ type Place struct {
 }
 
 var Nowhere = Place{math.MaxInt, math.MaxInt}
+var Up = Place{0, -1}
+var Right = Place{1, 0}
+var Down = Place{0, 1}
+var Left = Place{-1, 0}
 
 func (p Place) To(o Place) Place {
 	return Place{o.X - p.X, o.Y - p.Y}
